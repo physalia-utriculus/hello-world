@@ -76,5 +76,5 @@ jobs:
         working-directory: infra/support
         run: |
           terraform apply -auto-approve \
-            -var="terraform_state_bucket_name=${{ vars.TERRAFORM_GCS_STATE_BUCKET_NAME }}"
+            -var="terraform_state_bucket_name=${{ vars.TERRAFORM_GCS_STATE_BUCKET_NAME }}" \
             -var="app_image_reference=${{ env.APP_IMAGE_REFERENCE }}"
