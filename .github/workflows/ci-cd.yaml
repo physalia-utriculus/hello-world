@@ -30,15 +30,6 @@ jobs:
       - name: Build and test
         run: ./gradlew build
 
-      - name: Build fat JAR
-        run: ./gradlew :app:buildFatJar
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-jar
-          path: code/app/build/libs/app-fat.jar
-
   deploy:
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -85,5 +76,5 @@ jobs:
         working-directory: infra/support
         run: |
           terraform apply -auto-approve \
-            -var="terraform_state_bucket_name=${{ vars.TERRAFORM_GCS_STATE_BUCKET_NAME }}
+            -var="terraform_state_bucket_name=${{ vars.TERRAFORM_GCS_STATE_BUCKET_NAME }}"
             -var="app_image_reference=${{ env.APP_IMAGE_REFERENCE }}"
