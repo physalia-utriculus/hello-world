@@ -13,4 +13,6 @@ plugins {
 
 rootProject.name = "hello-world"
 
-include("app")
+include("shared")
+include("console")
+include("worker")

@@ -1,74 +1,127 @@
 # hello-world
 
-A minimal Ktor application running on Google Cloud Run with Firestore persistence.
+A Kotlin demo showing a long-running session architecture on Google Cloud:
 
-## Features
+- `console`: Ktor web app deployed as a Cloud Run Service
+- `worker`: Kotlin coroutine-based process deployed as a Cloud Run Job
+- `Firestore`: durable store for session state and progress events
 
-- **GET /** - Returns "Hello, World!"
-- **POST /counter/increment** - Increments a counter in Firestore and returns the new value
-- **GET /counter** - Returns the current counter value
+## What It Does
+
+The console starts a session with a single button. That creates a Firestore session document and triggers a Cloud Run Job execution. The worker performs a demo workload built around public zero-auth APIs plus delays, and writes progress updates back to Firestore as it runs.
+
+The console polls the backend every few seconds, so the session view refreshes while the job is still running.
+
+## Modules
+
+- `source/shared`: shared models, config, and Firestore repository
+- `source/console`: Ktor console service
+- `source/worker`: worker job entrypoint and demo workload
+
+## Session Data Model
+
+Firestore collections:
+
+- `sessions/{sessionId}`
+- `sessions/{sessionId}/events/{eventId}`
+
+Each session stores status, timestamps, current step, progress percentage, execution name, result summary, and failure details.
 
 ## Local Development
 
+Environment variables required by the console:
+
+- `GCP_PROJECT_ID`
+- `GCP_REGION`
+- `WORKER_JOB_NAME`
+
+Environment variable required by the worker:
+
+- `SESSION_ID`
+
+Run the console locally:
+
 ```bash
-cd code
-./gradlew run
+cd source
+GCP_PROJECT_ID=<project-id> \
+GCP_REGION=<region> \
+WORKER_JOB_NAME=hello-world-worker \
+./gradlew :console:run
 ```
 
-The application will start on port 8080.
-
-## Building
+Run the worker locally:
 
 ```bash
-cd code
-./gradlew build           # Build and test
-./gradlew :app:buildFatJar  # Build fat JAR for deployment
+cd source
+SESSION_ID=<existing-session-id> ./gradlew :worker:run
+```
+
+## Build
+
+```bash
+cd source
+./gradlew build
+./gradlew :console:buildFatJar :worker:buildFatJar
+```
+
+## Docker Images
+
+The root `source/Dockerfile` builds both deployables using multi-stage targets:
+
+- `console`
+- `worker`
+
+Examples:
+
+```bash
+docker build --target console -t console-image ./source
+docker build --target worker -t worker-image ./source
 ```
 
 ## Infrastructure
 
-### Foundation Stack (`infra/foundation/`)
+### Foundation Stack
 
-Creates resources requiring elevated permissions (run locally with high-privilege account):
+`infra/foundation/` provisions:
 
-- GCP APIs enablement
-- App service account for Cloud Run
-- GitHub Actions service account with Workload Identity Federation
+- GCP project and API enablement
+- Artifact Registry
+- application service account
+- GitHub Actions deployment service account
+- IAM needed for Firestore and Cloud Run deployment
 
-```bash
-cd infra/foundation
-terraform init -backend-config="bucket=<TERRAFORM_STATE_BUCKET>"
-terraform apply \
-  -var="project_id=<PROJECT_ID>" \
-  -var="github_org=<GITHUB_ORG>"
-```
+### Support Stack
 
-### Support Stack (`infra/support/`)
+`infra/support/` provisions:
 
-Creates supporting resources (run via GitHub Actions):
-
-- Artifact Registry repository
 - Firestore database
-- Cloud Run service
+- Cloud Run Service for the console
+- Cloud Run Job for the worker
 
-### GitHub Actions Variables Required
+The console service receives these environment variables from Terraform:
 
-Set these at repository or organization level:
+- `GCP_PROJECT_ID`
+- `GCP_REGION`
+- `WORKER_JOB_NAME`
 
-| Variable | Description |
-|----------|-------------|
-| `GCP_PROJECT_ID` | GCP project ID |
-| `TERRAFORM_GCS_STATE_BUCKET_NAME` | GCS bucket for Terraform state |
-| `GCP_WORKLOAD_IDENTITY_PROVIDER` | WIF provider (from foundation output) |
-| `GCP_SERVICE_ACCOUNT` | GitHub Actions service account email |
-| `GCP_APP_SERVICE_ACCOUNT` | App service account email |
+## CI/CD
 
-## API Usage
+GitHub Actions now:
 
-```bash
-# Increment counter
-curl -X POST https://<SERVICE_URL>/counter/increment
+1. runs `./gradlew build`
+2. builds two images
+3. pushes both images to Artifact Registry
+4. applies Terraform with `console_image_reference` and `worker_image_reference`
 
-# Get current count
-curl https://<SERVICE_URL>/counter
-```
+## API Surface
+
+- `GET /` renders the console UI
+- `POST /sessions` creates a session and starts a worker job execution
+- `GET /api/sessions` lists recent sessions
+- `GET /api/sessions/{sessionId}` returns one session plus its events
+
+## Notes
+
+- The demo intentionally uses polling for the console refresh path to keep the first version simple and reliable on Cloud Run.
+- The worker uses coroutine-based I/O and is safe to run without any active observer.
+- Worker retries are disabled in Terraform for now to avoid duplicate progress events in the demo.

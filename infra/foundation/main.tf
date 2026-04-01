@@ -108,6 +108,7 @@ resource "google_project_service" "apis" {
     "iamcredentials.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "orgpolicy.googleapis.com",
+    "compute.googleapis.com",
   ])
 
   project            = local.gcp_app_project_id
@@ -209,6 +210,12 @@ resource "google_service_account" "app_service_account" {
 resource "google_project_iam_member" "app_sa_datastore_user_member" {
   project = local.gcp_app_project_id
   role    = "roles/datastore.user"
+  member  = "serviceAccount:${google_service_account.app_service_account.email}"
+}
+
+resource "google_project_iam_member" "app_sa_run_developer_member" {
+  project = local.gcp_app_project_id
+  role    = "roles/run.developer"
   member  = "serviceAccount:${google_service_account.app_service_account.email}"
 }
 
