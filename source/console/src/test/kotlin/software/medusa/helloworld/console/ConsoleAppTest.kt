@@ -2,29 +2,26 @@ package software.medusa.helloworld.console
 
 import io.ktor.client.request.get
 import io.ktor.client.request.post
-import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.testApplication
-import software.medusa.helloworld.shared.SessionDetail
-import software.medusa.helloworld.shared.SessionEvent
 import software.medusa.helloworld.shared.SessionRepository
-import software.medusa.helloworld.shared.SessionStatus
-import software.medusa.helloworld.shared.SessionSummary
+import software.medusa.helloworld.shared.models.SessionDetail
+import software.medusa.helloworld.shared.models.SessionEvent
+import software.medusa.helloworld.shared.models.SessionStatus
+import software.medusa.helloworld.shared.models.SessionSummary
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class ConsoleAppTest {
     @Test
-    fun rootRendersConsolePage(): Unit = testApplication {
+    fun rootServesFrontendShell(): Unit = testApplication {
         application {
             module(InMemorySessionRepository(), FakeJobExecutionClient())
         }
 
         client.get("/").apply {
             assertEquals(HttpStatusCode.OK, status)
-            assertTrue(bodyAsText().contains("Session Console"))
         }
     }
 
@@ -70,7 +67,12 @@ private class InMemorySessionRepository : SessionRepository {
 
     override suspend fun markRunning(sessionId: String, executionName: String?) {
         sessions.computeIfPresent(sessionId) { _, session ->
-            session.copy(status = SessionStatus.RUNNING, executionName = executionName, currentStep = "Starting worker", progressPercent = 5)
+            session.copy(
+                status = SessionStatus.RUNNING,
+                executionName = executionName,
+                currentStep = "Starting worker",
+                progressPercent = 5
+            )
         }
     }
 
@@ -80,7 +82,13 @@ private class InMemorySessionRepository : SessionRepository {
         }
     }
 
-    override suspend fun recordProgress(sessionId: String, step: String, progressPercent: Int, message: String, details: String?) {
+    override suspend fun recordProgress(
+        sessionId: String,
+        step: String,
+        progressPercent: Int,
+        message: String,
+        details: String?,
+    ) {
         sessions.computeIfPresent(sessionId) { _, session ->
             session.copy(status = SessionStatus.RUNNING, currentStep = step, progressPercent = progressPercent)
         }
@@ -88,7 +96,12 @@ private class InMemorySessionRepository : SessionRepository {
 
     override suspend fun markSucceeded(sessionId: String, resultSummary: String) {
         sessions.computeIfPresent(sessionId) { _, session ->
-            session.copy(status = SessionStatus.SUCCEEDED, resultSummary = resultSummary, currentStep = "Completed", progressPercent = 100)
+            session.copy(
+                status = SessionStatus.SUCCEEDED,
+                resultSummary = resultSummary,
+                currentStep = "Completed",
+                progressPercent = 100
+            )
         }
     }
 

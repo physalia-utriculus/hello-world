@@ -47,7 +47,13 @@ suspend fun runWorkerSession(
                 async { demoClient.fetchAge() },
             )
         }
-        repository.recordProgress(sessionId, "Processing first batch", 50, "First batch finished.", batchOne.joinToString(" | "))
+        repository.recordProgress(
+            sessionId,
+            "Processing first batch",
+            50,
+            "First batch finished.",
+            batchOne.joinToString(" | ")
+        )
 
         delay(1500)
 
@@ -58,7 +64,13 @@ suspend fun runWorkerSession(
                 async { demoClient.fetchCatFact() },
             )
         }
-        repository.recordProgress(sessionId, "Aggregating results", 90, "Summarising responses.", batchTwo.joinToString(" | "))
+        repository.recordProgress(
+            sessionId,
+            "Aggregating results",
+            90,
+            "Summarising responses.",
+            batchTwo.joinToString(" | ")
+        )
 
         delay(1000)
 

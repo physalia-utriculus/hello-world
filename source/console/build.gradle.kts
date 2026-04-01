@@ -5,7 +5,15 @@ plugins {
     application
 }
 
+val consoleWebDist = layout.buildDirectory.dir("generated/console-web")
+val syncConsoleWebDist by tasks.registering(Sync::class) {
+    dependsOn(":console-web:jsBrowserDistribution")
+    from(project(":console-web").layout.buildDirectory.dir("dist/js/productionExecutable"))
+    into(consoleWebDist)
+}
+
 dependencies {
+    implementation(project(":shared-models"))
     implementation(project(":shared"))
     implementation(libs.google.cloud.firestore)
     implementation(libs.ktor.server.core)
@@ -43,4 +51,11 @@ ktor {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+}
+
+tasks.named<ProcessResources>("processResources") {
+    dependsOn(syncConsoleWebDist)
+    from(consoleWebDist) {
+        into("web")
+    }
 }

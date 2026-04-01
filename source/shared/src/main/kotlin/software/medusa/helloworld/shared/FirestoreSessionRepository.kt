@@ -7,6 +7,10 @@ import com.google.cloud.firestore.Firestore
 import com.google.cloud.firestore.SetOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import software.medusa.helloworld.shared.models.SessionDetail
+import software.medusa.helloworld.shared.models.SessionEvent
+import software.medusa.helloworld.shared.models.SessionStatus
+import software.medusa.helloworld.shared.models.SessionSummary
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -15,7 +19,14 @@ interface SessionRepository {
     suspend fun createQueuedSession(sessionId: String = UUID.randomUUID().toString()): SessionSummary
     suspend fun markRunning(sessionId: String, executionName: String?)
     suspend fun markFailedToStart(sessionId: String, errorMessage: String)
-    suspend fun recordProgress(sessionId: String, step: String, progressPercent: Int, message: String, details: String? = null)
+    suspend fun recordProgress(
+        sessionId: String,
+        step: String,
+        progressPercent: Int,
+        message: String,
+        details: String? = null,
+    )
+
     suspend fun markSucceeded(sessionId: String, resultSummary: String)
     suspend fun markFailed(sessionId: String, errorMessage: String)
     suspend fun listSessions(limit: Int = 20): List<SessionSummary>
@@ -243,6 +254,7 @@ class FirestoreSessionRepository(
             "errorMessage" to errorMessage,
         ).filterValues { it != null }
     }
+
     companion object {
         private const val SESSIONS_COLLECTION = "sessions"
         private const val EVENTS_COLLECTION = "events"

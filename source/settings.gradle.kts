@@ -13,6 +13,8 @@ plugins {
 
 rootProject.name = "hello-world"
 
+include("shared-models")
 include("shared")
 include("console")
+include("console-web")
 include("worker")

@@ -1,4 +1,4 @@
-package software.medusa.helloworld.shared
+package software.medusa.helloworld.shared.models
 
 import kotlinx.serialization.Serializable
 
