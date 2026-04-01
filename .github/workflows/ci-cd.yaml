@@ -7,7 +7,8 @@ on:
     branches: [ main ]
 
 env:
-  APP_IMAGE_REFERENCE: ${{ vars.APP_PARTIAL_IMAGE_REFERENCE }}/app:${{ github.sha }}
+  CONSOLE_IMAGE_REFERENCE: ${{ vars.APP_PARTIAL_IMAGE_REFERENCE }}/console:${{ github.sha }}
+  WORKER_IMAGE_REFERENCE: ${{ vars.APP_PARTIAL_IMAGE_REFERENCE }}/worker:${{ github.sha }}
   TF_INPUT: false # Disable interactive prompts in Terraform commands
 
 jobs:
@@ -59,8 +60,10 @@ jobs:
       - name: Build and push Docker image
         working-directory: source
         run: |
-          docker build -t ${{ env.APP_IMAGE_REFERENCE }} .
-          docker push ${{ env.APP_IMAGE_REFERENCE }}
+          docker build --target console -t ${{ env.CONSOLE_IMAGE_REFERENCE }} .
+          docker build --target worker -t ${{ env.WORKER_IMAGE_REFERENCE }} .
+          docker push ${{ env.CONSOLE_IMAGE_REFERENCE }}
+          docker push ${{ env.WORKER_IMAGE_REFERENCE }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v4
@@ -78,4 +81,5 @@ jobs:
         run: |
           terraform apply -auto-approve \
             -var="shared_terraform_gcs_state_bucket_name=${{ vars.TERRAFORM_GCS_STATE_BUCKET_NAME }}" \
-            -var="app_image_reference=${{ env.APP_IMAGE_REFERENCE }}"
+            -var="console_image_reference=${{ env.CONSOLE_IMAGE_REFERENCE }}" \
+            -var="worker_image_reference=${{ env.WORKER_IMAGE_REFERENCE }}"

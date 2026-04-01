@@ -28,8 +28,13 @@ variable "shared_terraform_gcs_state_bucket_name" {
   type        = string
 }
 
-variable "app_image_reference" {
-  description = "Container image reference for the built app to deploy."
+variable "console_image_reference" {
+  description = "Container image reference for the console service."
+  type        = string
+}
+
+variable "worker_image_reference" {
+  description = "Container image reference for the worker job."
   type        = string
 }
 
@@ -66,17 +71,32 @@ resource "google_firestore_database" "main_firestore_database" {
 
 # Cloud Run service
 resource "google_cloud_run_v2_service" "app_service" {
-  name     = "hello-world"
+  name     = "hello-world-console"
   location = local.gcp_primary_location
 
   template {
     service_account = local.gcp_app_service_account_email
 
     containers {
-      image = var.app_image_reference
+      image = var.console_image_reference
 
       ports {
         container_port = 8080
+      }
+
+      env {
+        name  = "GCP_PROJECT_ID"
+        value = local.gcp_app_project_id
+      }
+
+      env {
+        name  = "GCP_REGION"
+        value = local.gcp_primary_location
+      }
+
+      env {
+        name  = "WORKER_JOB_NAME"
+        value = google_cloud_run_v2_job.session_worker.name
       }
 
       resources {
@@ -99,6 +119,43 @@ resource "google_cloud_run_v2_service" "app_service" {
   }
 }
 
+resource "google_cloud_run_v2_job" "session_worker" {
+  name     = "hello-world-worker"
+  location = local.gcp_primary_location
+
+  template {
+    task_count  = 1
+    parallelism = 1
+
+    template {
+      service_account = local.gcp_app_service_account_email
+      max_retries     = 0
+      timeout         = "7200s"
+
+      containers {
+        image = var.worker_image_reference
+
+        env {
+          name  = "GCP_PROJECT_ID"
+          value = local.gcp_app_project_id
+        }
+
+        env {
+          name  = "GCP_REGION"
+          value = local.gcp_primary_location
+        }
+
+        resources {
+          limits = {
+            cpu    = "1"
+            memory = "512Mi"
+          }
+        }
+      }
+    }
+  }
+}
+
 # Allow unauthenticated access to Cloud Run
 resource "google_cloud_run_v2_service_iam_member" "public" {
   project  = local.gcp_app_project_id
@@ -112,4 +169,8 @@ resource "google_cloud_run_v2_service_iam_member" "public" {
 
 output "service_url" {
   value = google_cloud_run_v2_service.app_service.uri
+}
+
+output "worker_job_name" {
+  value = google_cloud_run_v2_job.session_worker.name
 }
