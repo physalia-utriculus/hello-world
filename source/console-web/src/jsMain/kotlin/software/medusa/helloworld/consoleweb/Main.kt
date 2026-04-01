@@ -18,6 +18,8 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.web.attributes.ButtonType
 import org.jetbrains.compose.web.attributes.disabled
 import org.jetbrains.compose.web.attributes.type
@@ -99,7 +101,7 @@ private fun ConsoleApp() {
                                 runCatching {
                                     val response = httpClient.post("/sessions")
                                     if (response.status.value !in 200..299) {
-                                        throw Error(response.bodyAsText())
+                                        throw RuntimeException(extractErrorMessage(response.bodyAsText()))
                                     }
                                     response.body<StartSessionResponse>()
                                 }.onSuccess { response ->
@@ -107,7 +109,8 @@ private fun ConsoleApp() {
                                     refreshSessions()
                                     refreshDetail()
                                 }.onFailure { error ->
-                                    js("console.error('Session starting failed', error)")
+                                    val details = error.message ?: error.toString()
+                                    console.error("Session starting failed:", details)
                                     actionError = "Session starting failed"
                                 }
                                 startInFlight = false
@@ -257,3 +260,9 @@ private fun MutedText(text: String) {
 }
 
 private fun formatTimestamp(value: String): String = value.replace("T", " ").removeSuffix("Z")
+
+private fun extractErrorMessage(responseBody: String): String {
+    return runCatching {
+        Json.parseToJsonElement(responseBody).jsonObject["error"]?.jsonPrimitive?.content
+    }.getOrNull() ?: responseBody
+}

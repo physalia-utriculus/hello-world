@@ -17,6 +17,7 @@ import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
+import kotlinx.serialization.json.Json
 import software.medusa.helloworld.shared.AppConfig
 import software.medusa.helloworld.shared.FirestoreSessionRepository
 import software.medusa.helloworld.shared.SessionRepository
@@ -38,7 +39,7 @@ fun Application.module() {
         .createScoped(listOf("https://www.googleapis.com/auth/cloud-platform"))
     val httpClient = HttpClient(CIO) {
         install(ClientContentNegotiation) {
-            json()
+            json(Json { ignoreUnknownKeys = true })
         }
     }
     val jobExecutionClient = CloudRunJobExecutionClient(httpClient, credentials, appConfig)
