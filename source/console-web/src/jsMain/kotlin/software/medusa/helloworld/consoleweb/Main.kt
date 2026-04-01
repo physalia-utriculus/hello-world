@@ -13,6 +13,7 @@ import io.ktor.client.engine.js.Js
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.post
+import io.ktor.client.statement.bodyAsText
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -96,13 +97,18 @@ private fun ConsoleApp() {
                             actionError = null
                             scope.launch {
                                 runCatching {
-                                    httpClient.post("/sessions").body<StartSessionResponse>()
+                                    val response = httpClient.post("/sessions")
+                                    if (response.status.value !in 200..299) {
+                                        throw Error(response.bodyAsText())
+                                    }
+                                    response.body<StartSessionResponse>()
                                 }.onSuccess { response ->
                                     selectedSessionId = response.sessionId
                                     refreshSessions()
                                     refreshDetail()
                                 }.onFailure { error ->
-                                    actionError = error.message ?: "Failed to start session."
+                                    js("console.error('Session starting failed', error)")
+                                    actionError = "Session starting failed"
                                 }
                                 startInFlight = false
                             }
