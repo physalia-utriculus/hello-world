@@ -6,6 +6,7 @@ import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -13,9 +14,14 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import software.medusa.helloworld.shared.FirestoreSessionRepository
 import software.medusa.helloworld.shared.SessionRepository
 import software.medusa.helloworld.shared.requiredEnv
+
+private val workerJson = Json {
+    ignoreUnknownKeys = true
+}
 
 suspend fun main() {
     val sessionId = requiredEnv("SESSION_ID")
@@ -23,7 +29,7 @@ suspend fun main() {
     val repository = FirestoreSessionRepository(firestore)
     val httpClient = HttpClient(CIO) {
         install(ContentNegotiation) {
-            json()
+            json(workerJson)
         }
     }
 
@@ -101,7 +107,9 @@ class PublicApiDemoClient(
     }
 
     override suspend fun fetchAdvice(): String {
-        val advice = httpClient.get("https://api.adviceslip.com/advice").body<AdviceEnvelope>()
+        val advice = workerJson.decodeFromString<AdviceEnvelope>(
+            httpClient.get("https://api.adviceslip.com/advice").bodyAsText(),
+        )
         return "advice:${advice.slip.advice}"
     }
 
