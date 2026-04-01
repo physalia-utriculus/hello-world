@@ -71,8 +71,9 @@ resource "google_firestore_database" "main_firestore_database" {
 
 # Cloud Run service
 resource "google_cloud_run_v2_service" "app_service" {
-  name     = "hello-world-console"
-  location = local.gcp_primary_location
+  name                = "hello-world-console"
+  location            = local.gcp_primary_location
+  deletion_protection = false # This project is experimental
 
   template {
     service_account = local.gcp_app_service_account_email
@@ -120,8 +121,9 @@ resource "google_cloud_run_v2_service" "app_service" {
 }
 
 resource "google_cloud_run_v2_job" "session_worker" {
-  name     = "hello-world-worker"
-  location = local.gcp_primary_location
+  name                = "hello-world-worker"
+  location            = local.gcp_primary_location
+  deletion_protection = false # This project is experimental
 
   template {
     task_count  = 1
