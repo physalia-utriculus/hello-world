@@ -6,6 +6,7 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":shared-models"))
     implementation(project(":shared"))
     implementation(libs.google.cloud.firestore)
     implementation(libs.ktor.client.core)

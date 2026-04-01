@@ -1,12 +1,11 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.serialization)
 }
 
 dependencies {
+    implementation(project(":shared-models"))
     implementation(libs.google.cloud.firestore)
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.ktor.serialization.kotlinx.json)
 
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation(libs.junit.jupiter.engine)

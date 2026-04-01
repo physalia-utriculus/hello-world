@@ -1,5 +1,6 @@
 package software.medusa.helloworld.shared
 
+import software.medusa.helloworld.shared.models.SessionStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

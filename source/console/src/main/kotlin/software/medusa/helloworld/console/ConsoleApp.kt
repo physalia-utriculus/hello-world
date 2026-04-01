@@ -4,25 +4,26 @@ import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.firestore.FirestoreOptions
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
-import io.ktor.server.application.call
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
+import io.ktor.server.request.path
 import io.ktor.server.response.respond
-import io.ktor.server.response.respondText
+import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import software.medusa.helloworld.shared.AppConfig
 import software.medusa.helloworld.shared.FirestoreSessionRepository
 import software.medusa.helloworld.shared.SessionRepository
-import software.medusa.helloworld.shared.SessionListResponse
-import software.medusa.helloworld.shared.StartSessionResponse
+import software.medusa.helloworld.shared.models.SessionListResponse
+import software.medusa.helloworld.shared.models.StartSessionResponse
+import java.net.URLConnection
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -54,13 +55,16 @@ fun Application.module(
     }
     install(StatusPages) {
         exception<Throwable> { call, cause ->
-            call.respond(io.ktor.http.HttpStatusCode.InternalServerError, mapOf("error" to (cause.message ?: "Unexpected error")))
+            call.respond(
+                io.ktor.http.HttpStatusCode.InternalServerError,
+                mapOf("error" to (cause.message ?: "Unexpected error"))
+            )
         }
     }
 
     routing {
         get("/") {
-            call.respondText(renderConsolePage(), io.ktor.http.ContentType.Text.Html)
+            respondWebResource(call, "index.html")
         }
 
         post("/sessions") {
@@ -88,5 +92,27 @@ fun Application.module(
                 call.respond(detail)
             }
         }
+
+        get("/web/{path...}") {
+            val path = call.parameters.getAll("path")?.joinToString("/") ?: error("Missing path")
+            respondWebResource(call, path)
+        }
     }
+}
+
+private suspend fun respondWebResource(call: io.ktor.server.application.ApplicationCall, path: String) {
+    val resourcePath = "web/$path"
+    val resourceStream = Thread.currentThread().contextClassLoader.getResourceAsStream(resourcePath)
+        ?: error("Missing web resource: $resourcePath")
+    val bytes = resourceStream.use { it.readBytes() }
+    val contentType = URLConnection.guessContentTypeFromName(call.request.path())
+        ?.let(io.ktor.http.ContentType::parse)
+        ?: when {
+            path.endsWith(".js") -> io.ktor.http.ContentType.Application.JavaScript
+            path.endsWith(".css") -> io.ktor.http.ContentType.Text.CSS
+            path.endsWith(".html") -> io.ktor.http.ContentType.Text.Html
+            else -> io.ktor.http.ContentType.Application.OctetStream
+        }
+
+    call.respondBytes(bytes, contentType)
 }
