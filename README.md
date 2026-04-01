@@ -11,7 +11,7 @@ A minimal Ktor application running on Google Cloud Run with Firestore persistenc
 ## Local Development
 
 ```bash
-cd code
+cd source
 ./gradlew run
 ```
 
@@ -20,7 +20,7 @@ The application will start on port 8080.
 ## Building
 
 ```bash
-cd code
+cd source
 ./gradlew build           # Build and test
 ./gradlew :app:buildFatJar  # Build fat JAR for deployment
 ```
